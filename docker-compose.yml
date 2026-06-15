@@ -1,4 +1,57 @@
+version: '3.8'
+
 services:
+  app1:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: demo-app-1
+    ports:
+      - "8081:8080"
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  app2:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: demo-app-2
+    ports:
+      - "8082:8080"
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
+  app3:
+    build:
+      context: .
+      dockerfile: Dockerfile
+    container_name: demo-app-3
+    ports:
+      - "8083:8080"
+    restart: unless-stopped
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    healthcheck:
+      test: ["CMD", "wget", "--no-verbose", "--tries=1", "--spider", "http://localhost:8080/"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 5s
+
   nginx:
     image: nginx:latest
     container_name: nginx
@@ -6,8 +59,14 @@ services:
       - "80:80"
     volumes:
       - ./nginx.conf:/etc/nginx/nginx.conf:ro
-
+    depends_on:
+      app1:
+        condition: service_healthy
+      app2:
+        condition: service_healthy
+      app3:
+        condition: service_healthy
+    restart: unless-stopped
     extra_hosts:
       - "host.docker.internal:host-gateway"
 
-    restart: unless-stopped

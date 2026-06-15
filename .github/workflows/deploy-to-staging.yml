@@ -1,0 +1,84 @@
+name: Deploy to Staging
+
+on:
+  push:
+    branches: [ master ]
+  workflow_dispatch:
+
+jobs:
+  deploy:
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+
+    - name: Set up JDK 17
+      uses: actions/setup-java@v4
+      with:
+        java-version: '17'
+        distribution: 'temurin'
+        cache: maven
+
+    - name: Build with Maven
+      run: mvn clean package -DskipTests
+
+    - name: Configure Docker Compose for staging
+      run: |
+        cat > docker-compose.staging.yml << 'EOF'
+        services:
+          app1:
+            build:
+              context: .
+              dockerfile: Dockerfile
+            container_name: demo-app-1
+            ports:
+              - "8081:8080"
+            restart: unless-stopped
+            environment:
+              SPRING_PROFILES_ACTIVE: staging
+          
+          app2:
+            build:
+              context: .
+              dockerfile: Dockerfile
+            container_name: demo-app-2
+            ports:
+              - "8082:8080"
+            restart: unless-stopped
+            environment:
+              SPRING_PROFILES_ACTIVE: staging
+          
+          app3:
+            build:
+              context: .
+              dockerfile: Dockerfile
+            container_name: demo-app-3
+            ports:
+              - "8083:8080"
+            restart: unless-stopped
+            environment:
+              SPRING_PROFILES_ACTIVE: staging
+          
+          nginx:
+            image: nginx:latest
+            container_name: nginx-staging
+            ports:
+              - "80:80"
+            volumes:
+              - ./nginx.conf:/etc/nginx/nginx.conf:ro
+            depends_on:
+              - app1
+              - app2
+              - app3
+            restart: unless-stopped
+        EOF
+
+    - name: Deploy note
+      run: |
+        echo "Staging deployment configuration generated."
+        echo "To deploy:"
+        echo "1. SSH to your staging server"
+        echo "2. Pull the latest code"
+        echo "3. Run: docker-compose -f docker-compose.staging.yml up -d"
+        echo "4. Monitor: docker-compose -f docker-compose.staging.yml logs -f"
+
